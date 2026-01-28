@@ -1,5 +1,5 @@
 #!/bin/bash
-DOTFILES_DIR="$HOME/dotfiles"
+DOTFILES_DIR="$HOME/.dotfiles"
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR" "$HOME/.local/bin"
 
