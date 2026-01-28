@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script generates the entire structure for the conarwelsh/dotfiles repository.
-# Run this command: bash create_dotfiles_repo.sh
+# It includes the fix for installing 'eza' on Ubuntu/Debian.
 
 echo "🛠️ Generating conarwelsh/dotfiles repository structure..."
 
@@ -32,7 +32,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/conarwelsh/dotfiles/main
 * `ll`: Modern LS
 EOF
 
-# 2. install.sh
+# 2. install.sh (Fixed with Ubuntu eza logic)
 cat << 'EOF' > install.sh
 #!/bin/bash
 set -e
@@ -41,7 +41,16 @@ DOTFILES_DIR="$HOME/.dotfiles"
 
 echo "📦 Installing dependencies..."
 if command -v apt-get &> /dev/null; then
-    sudo apt-get update && sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find
+    sudo apt-get update
+    sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
+    
+    # Official eza installation for Debian/Ubuntu
+    sudo mkdir -p /etc/apt/keyrings
+    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
+    sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+    sudo apt update
+    sudo apt install -y eza
 elif command -v pacman &> /dev/null; then
     sudo pacman -Syu --noconfirm zsh git curl fzf zoxide bat ripgrep fd-find eza
 elif command -v brew &> /dev/null; then
@@ -79,7 +88,7 @@ ln -sf "$DOTFILES_DIR/themes/one-dark.toml" "$CONFIG_DIR/starship.toml"
 echo "✨ Links synced."
 EOF
 
-# 4. .zshrc
+# 4. .zshrc (With fallback check for eza)
 cat << 'EOF' > .zshrc
 export DOTFILES="$HOME/.dotfiles"
 export PATH="$HOME/.local/bin:$PATH"
@@ -88,8 +97,16 @@ eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
 alias tt='source $DOTFILES/scripts/theme-toggle.sh'
-alias ls='eza --icons --git --group-directories-first'
-alias ll='ls -lh'
+
+# Check if eza exists, otherwise fallback to ls
+if command -v eza > /dev/null; then
+    alias ls='eza --icons --git --group-directories-first'
+    alias ll='ls -lh'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -alF'
+fi
+
 alias cat='bat --style=plain --paging=never'
 alias t='turbo'
 alias td='turbo run dev'
@@ -157,4 +174,4 @@ cat << 'EOF' > windows-terminal.json
 EOF
 
 chmod +x install.sh setup_links.sh scripts/theme-toggle.sh
-echo "✅ All files generated. You can now: git init && git add . && git commit"
+echo "✅ All files generated. Ready to push to GitHub."
