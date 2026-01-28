@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "list": [
+      {
+        "name": "WSL: One Dark",
+        "commandline": "wsl.exe -d Ubuntu",
+        "useAcrylic": false
+      },
+      {
+        "name": "WSL: Glass",
+        "commandline": "wsl.exe -d Ubuntu",
+        "useAcrylic": true,
+        "acrylicOpacity": 0.6
+      }
+    ]
+  }
+}
