@@ -5,8 +5,16 @@ eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
 alias tt='source $DOTFILES/scripts/theme-toggle.sh'
-alias ls='eza --icons --git --group-directories-first'
-alias ll='ls -lh'
+
+# Check if eza exists, otherwise fallback to ls
+if command -v eza > /dev/null; then
+    alias ls='eza --icons --git --group-directories-first'
+    alias ll='ls -lh'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -alF'
+fi
+
 alias cat='bat --style=plain --paging=never'
 alias t='turbo'
 alias td='turbo run dev'

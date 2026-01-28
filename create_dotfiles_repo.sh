@@ -1,38 +1,27 @@
 #!/bin/bash
 
-# This script generates the entire structure for the conarwelsh/dotfiles repository.
-# It includes the fix for installing 'eza' on Ubuntu/Debian.
+# This script generates the final, robust structure for conarwelsh/dotfiles.
+# It handles the Ubuntu 'batcat' naming and prevents alias-looping in scripts.
 
-echo "🛠️ Generating conarwelsh/dotfiles repository structure..."
+echo "🛠️ Generating conarwelsh/dotfiles (v3 - Stable)..."
 
-# Create directories
 mkdir -p scripts themes
 
 # 1. README.md
 cat << 'EOF' > README.md
 # 🚀 Terminal Velocity: Awesome Dotfiles
-
-A high-performance terminal environment optimized for **Turborepo, NestJS, Next.js, and Tauri**.
-
-## 🎨 Dual-Core Themes
-Switch between **One Dark Pro** (Focus) and **Glass Frosted** (Aesthetic) instantly.
-
-**Switch Command:** `tt`
+Optimized for **Turborepo, NestJS, Next.js, and Tauri**.
 
 ## 🛠️ Installation
-Run this one-liner on any fresh Linux/WSL instance:
-\`\`\`bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh)"
-\`\`\`
-
+```bash
+bash -c "$(curl -fsSL [https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh](https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh))"
+```
 ## ⌨️ Shortcuts
 * `tt`: Toggle Theme
 * `z`: Smart Jump (fzf)
-* `td`: Turbo Dev
-* `ll`: Modern LS
 EOF
 
-# 2. install.sh (Fixed with Ubuntu eza logic)
+# 2. install.sh (Handles eza and batcat quirks)
 cat << 'EOF' > install.sh
 #!/bin/bash
 set -e
@@ -44,28 +33,20 @@ if command -v apt-get &> /dev/null; then
     sudo apt-get update
     sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
     
-    # Official eza installation for Debian/Ubuntu
+    # Fix 'bat' vs 'batcat'
+    mkdir -p "$HOME/.local/bin"
+    [ ! -f "$HOME/.local/bin/bat" ] && ln -s /usr/bin/batcat "$HOME/.local/bin/bat"
+
+    # Official eza installation
     sudo mkdir -p /etc/apt/keyrings
     wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
     echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
     sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
-    sudo apt update
-    sudo apt install -y eza
-elif command -v pacman &> /dev/null; then
-    sudo pacman -Syu --noconfirm zsh git curl fzf zoxide bat ripgrep fd-find eza
-elif command -v brew &> /dev/null; then
-    brew install zsh git curl fzf zoxide bat ripgrep fd eza
+    sudo apt update && sudo apt install -y eza
 fi
 
-if [ ! -d "$DOTFILES_DIR" ]; then
-    git clone "$REPO_URL" "$DOTFILES_DIR"
-else
-    cd "$DOTFILES_DIR" && git pull
-fi
-
-if ! command -v starship &> /dev/null; then
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
-fi
+[ ! -d "$DOTFILES_DIR" ] && git clone "$REPO_URL" "$DOTFILES_DIR"
+command -v starship &> /dev/null || curl -sS https://starship.rs/install.sh | sh -s -- -y
 
 chmod +x "$DOTFILES_DIR/setup_links.sh"
 "$DOTFILES_DIR/setup_links.sh"
@@ -85,10 +66,9 @@ ln -sf "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
 chmod +x "$DOTFILES_DIR/scripts/theme-toggle.sh"
 ln -sf "$DOTFILES_DIR/scripts/theme-toggle.sh" "$HOME/.local/bin/tt"
 ln -sf "$DOTFILES_DIR/themes/one-dark.toml" "$CONFIG_DIR/starship.toml"
-echo "✨ Links synced."
 EOF
 
-# 4. .zshrc (With fallback check for eza)
+# 4. .zshrc (Improved Aliases)
 cat << 'EOF' > .zshrc
 export DOTFILES="$HOME/.dotfiles"
 export PATH="$HOME/.local/bin:$PATH"
@@ -98,7 +78,14 @@ eval "$(zoxide init zsh)"
 
 alias tt='source $DOTFILES/scripts/theme-toggle.sh'
 
-# Check if eza exists, otherwise fallback to ls
+# Use 'bat' with fallback to 'cat'
+if command -v bat > /dev/null; then
+    alias cat='bat --style=plain --paging=never'
+elif command -v batcat > /dev/null; then
+    alias cat='batcat --style=plain --paging=never'
+fi
+
+# Use 'eza' with fallback to 'ls'
 if command -v eza > /dev/null; then
     alias ls='eza --icons --git --group-directories-first'
     alias ll='ls -lh'
@@ -107,7 +94,6 @@ else
     alias ll='ls -alF'
 fi
 
-alias cat='bat --style=plain --paging=never'
 alias t='turbo'
 alias td='turbo run dev'
 
@@ -121,21 +107,27 @@ z() {
 }
 EOF
 
-# 5. scripts/theme-toggle.sh
+# 5. scripts/theme-toggle.sh (Robust against aliases)
 cat << 'EOF' > scripts/theme-toggle.sh
 #!/bin/bash
+# Use command -v to find the real cat, ignoring shell aliases
+REAL_CAT=$(command -v cat)
 THEME_DIR="$HOME/.dotfiles/themes"
 DEST="$HOME/.config/starship.toml"
 STATE="$HOME/.dotfiles/.theme_state"
+
 [ ! -f "$STATE" ] && echo "one-dark" > "$STATE"
-if [ "$(cat $STATE)" == "one-dark" ]; then
+
+CURRENT_THEME=$($REAL_CAT "$STATE")
+
+if [[ "$CURRENT_THEME" == "one-dark" ]]; then
     ln -sf "$THEME_DIR/glass-frosted.toml" "$DEST"
     echo "glass-frosted" > "$STATE"
-    echo "💎 Glass Frosted Active"
+    echo "💎 Theme: Glass Frosted"
 else
     ln -sf "$THEME_DIR/one-dark.toml" "$DEST"
     echo "one-dark" > "$STATE"
-    echo "🌑 One Dark Active"
+    echo "🌑 Theme: One Dark Pro"
 fi
 EOF
 
@@ -144,6 +136,7 @@ cat << 'EOF' > themes/one-dark.toml
 add_newline = true
 [character]
 success_symbol = "[λ](bold purple)"
+error_symbol = "[λ](bold red)"
 [directory]
 style = "bold blue"
 [git_branch]
@@ -155,10 +148,13 @@ cat << 'EOF' > themes/glass-frosted.toml
 add_newline = true
 [character]
 success_symbol = "[❯](bold #f72585)[❯](bold #4cc9f0)"
+error_symbol = "[✖](bold red)"
 [directory]
 style = "bold #4cc9f0"
 [git_status]
 style = "bold #f72585"
+ahead = "⇡"
+behind = "⇣"
 EOF
 
 # 8. windows-terminal.json
@@ -174,4 +170,4 @@ cat << 'EOF' > windows-terminal.json
 EOF
 
 chmod +x install.sh setup_links.sh scripts/theme-toggle.sh
-echo "✅ All files generated. Ready to push to GitHub."
+echo "✅ Version 3 generated. Run 'tt' to test."
