@@ -6,7 +6,14 @@ eval "$(zoxide init zsh)"
 
 alias tt='source $DOTFILES/scripts/theme-toggle.sh'
 
-# Check if eza exists, otherwise fallback to ls
+# Use 'bat' with fallback to 'cat'
+if command -v bat > /dev/null; then
+    alias cat='bat --style=plain --paging=never'
+elif command -v batcat > /dev/null; then
+    alias cat='batcat --style=plain --paging=never'
+fi
+
+# Use 'eza' with fallback to 'ls'
 if command -v eza > /dev/null; then
     alias ls='eza --icons --git --group-directories-first'
     alias ll='ls -lh'
@@ -15,7 +22,6 @@ else
     alias ll='ls -alF'
 fi
 
-alias cat='bat --style=plain --paging=never'
 alias t='turbo'
 alias td='turbo run dev'
 

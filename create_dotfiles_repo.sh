@@ -1,27 +1,12 @@
 #!/bin/bash
 
-# This script generates the final, robust structure for conarwelsh/dotfiles.
-# It handles the Ubuntu 'batcat' naming and prevents alias-looping in scripts.
+# Final Version (v4): Optimized for WSL performance and Zsh-specific syntax.
 
-echo "🛠️ Generating conarwelsh/dotfiles (v3 - Stable)..."
+echo "🛠️ Generating conarwelsh/dotfiles (v4 - WSL Optimized)..."
 
 mkdir -p scripts themes
 
-# 1. README.md
-cat << 'EOF' > README.md
-# 🚀 Terminal Velocity: Awesome Dotfiles
-Optimized for **Turborepo, NestJS, Next.js, and Tauri**.
-
-## 🛠️ Installation
-```bash
-bash -c "$(curl -fsSL [https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh](https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh))"
-```
-## ⌨️ Shortcuts
-* `tt`: Toggle Theme
-* `z`: Smart Jump (fzf)
-EOF
-
-# 2. install.sh (Handles eza and batcat quirks)
+# 1. install.sh (Dependency & Path Fixes)
 cat << 'EOF' > install.sh
 #!/bin/bash
 set -e
@@ -33,11 +18,11 @@ if command -v apt-get &> /dev/null; then
     sudo apt-get update
     sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
     
-    # Fix 'bat' vs 'batcat'
+    # Symlink batcat to bat
     mkdir -p "$HOME/.local/bin"
     [ ! -f "$HOME/.local/bin/bat" ] && ln -s /usr/bin/batcat "$HOME/.local/bin/bat"
 
-    # Official eza installation
+    # Install eza
     sudo mkdir -p /etc/apt/keyrings
     wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
     echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
@@ -51,11 +36,10 @@ command -v starship &> /dev/null || curl -sS https://starship.rs/install.sh | sh
 chmod +x "$DOTFILES_DIR/setup_links.sh"
 "$DOTFILES_DIR/setup_links.sh"
 
-[ "$SHELL" != "$(which zsh)" ] && chsh -s "$(which zsh)"
-echo "✅ Setup complete! Restart terminal."
+echo "✅ Done! Run: source ~/.zshrc"
 EOF
 
-# 3. setup_links.sh
+# 2. setup_links.sh
 cat << 'EOF' > setup_links.sh
 #!/bin/bash
 DOTFILES_DIR="$HOME/.dotfiles"
@@ -68,30 +52,39 @@ ln -sf "$DOTFILES_DIR/scripts/theme-toggle.sh" "$HOME/.local/bin/tt"
 ln -sf "$DOTFILES_DIR/themes/one-dark.toml" "$CONFIG_DIR/starship.toml"
 EOF
 
-# 4. .zshrc (Improved Aliases)
+# 3. .zshrc (Performance & Completion Fixes)
 cat << 'EOF' > .zshrc
+# Fix for the 'docker' completion error on Ubuntu
+zstyle ':completion:*:*:docker:*' cache-policy dummy
+autoload -Uz compinit
+compinit -i -u # -u ignores insecure files to prevent error 503
+
 export DOTFILES="$HOME/.dotfiles"
 export PATH="$HOME/.local/bin:$PATH"
+
+# Starship WSL Performance Tweak
+export STARSHIP_CONFIG="$HOME/.config/starship.toml"
 
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
+# Toggle Alias
 alias tt='source $DOTFILES/scripts/theme-toggle.sh'
 
-# Use 'bat' with fallback to 'cat'
-if command -v bat > /dev/null; then
-    alias cat='bat --style=plain --paging=never'
-elif command -v batcat > /dev/null; then
-    alias cat='batcat --style=plain --paging=never'
-fi
-
-# Use 'eza' with fallback to 'ls'
+# Fast Aliases
 if command -v eza > /dev/null; then
     alias ls='eza --icons --git --group-directories-first'
     alias ll='ls -lh'
 else
     alias ls='ls --color=auto'
-    alias ll='ls -alF'
+    alias ll='ls -al'
+fi
+
+# Map batcat to cat safely
+if command -v bat > /dev/null; then
+    alias cat='bat --style=plain --paging=never'
+elif command -v batcat > /dev/null; then
+    alias cat='batcat --style=plain --paging=never'
 fi
 
 alias t='turbo'
@@ -100,25 +93,25 @@ alias td='turbo run dev'
 z() {
   if [[ "$#" -eq 0 ]]; then
     local dir=$(zoxide query -l | fzf --height 40% --reverse)
-    [ -n "$dir" ] && cd "$dir"
+    [[ -n "$dir" ]] && cd "$dir"
   else
     zoxide "$@"
   fi
 }
 EOF
 
-# 5. scripts/theme-toggle.sh (Robust against aliases)
+# 4. scripts/theme-toggle.sh (Zsh-Native Reading)
 cat << 'EOF' > scripts/theme-toggle.sh
-#!/bin/bash
-# Use command -v to find the real cat, ignoring shell aliases
-REAL_CAT=$(command -v cat)
+#!/bin/zsh
+# Using native Zsh features to avoid calling 'cat' or shell aliases
 THEME_DIR="$HOME/.dotfiles/themes"
 DEST="$HOME/.config/starship.toml"
 STATE="$HOME/.dotfiles/.theme_state"
 
-[ ! -f "$STATE" ] && echo "one-dark" > "$STATE"
+[[ ! -f "$STATE" ]] && echo "one-dark" > "$STATE"
 
-CURRENT_THEME=$($REAL_CAT "$STATE")
+# The $(<file) syntax reads a file directly in Zsh
+local CURRENT_THEME=$(<"$STATE")
 
 if [[ "$CURRENT_THEME" == "one-dark" ]]; then
     ln -sf "$THEME_DIR/glass-frosted.toml" "$DEST"
@@ -131,43 +124,31 @@ else
 fi
 EOF
 
-# 6. themes/one-dark.toml
+# 5. themes/one-dark.toml (Latency Optimized)
 cat << 'EOF' > themes/one-dark.toml
 add_newline = true
+scan_timeout = 10
 [character]
 success_symbol = "[λ](bold purple)"
 error_symbol = "[λ](bold red)"
-[directory]
-style = "bold blue"
-[git_branch]
-symbol = " "
+[nodejs]
+disabled = true # Major source of lag in monorepos
+[package]
+disabled = true # Major source of lag in monorepos
 EOF
 
-# 7. themes/glass-frosted.toml
+# 6. themes/glass-frosted.toml (Latency Optimized)
 cat << 'EOF' > themes/glass-frosted.toml
 add_newline = true
+scan_timeout = 10
 [character]
 success_symbol = "[❯](bold #f72585)[❯](bold #4cc9f0)"
 error_symbol = "[✖](bold red)"
-[directory]
-style = "bold #4cc9f0"
+[nodejs]
+disabled = true
 [git_status]
-style = "bold #f72585"
-ahead = "⇡"
-behind = "⇣"
-EOF
-
-# 8. windows-terminal.json
-cat << 'EOF' > windows-terminal.json
-{
-    "profiles": {
-        "list": [
-            { "name": "WSL: One Dark", "commandline": "wsl.exe -d Ubuntu", "useAcrylic": false },
-            { "name": "WSL: Glass", "commandline": "wsl.exe -d Ubuntu", "useAcrylic": true, "acrylicOpacity": 0.6 }
-        ]
-    }
-}
+disabled = false
 EOF
 
 chmod +x install.sh setup_links.sh scripts/theme-toggle.sh
-echo "✅ Version 3 generated. Run 'tt' to test."
+echo "✅ Version 4 Ready. Run 'source ~/.zshrc' then 'tt'."

@@ -1,7 +1,10 @@
 add_newline = true
 [character]
 success_symbol = "[❯](bold #f72585)[❯](bold #4cc9f0)"
+error_symbol = "[✖](bold red)"
 [directory]
 style = "bold #4cc9f0"
 [git_status]
 style = "bold #f72585"
+ahead = "⇡"
+behind = "⇣"
