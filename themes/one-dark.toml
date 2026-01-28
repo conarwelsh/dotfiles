@@ -6,3 +6,5 @@ error_symbol = "[λ](bold red)"
 style = "bold blue"
 [git_branch]
 symbol = " "
+[git_status]
+style = "bold red"

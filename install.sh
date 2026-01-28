@@ -5,14 +5,10 @@ DOTFILES_DIR="$HOME/.dotfiles"
 
 echo "📦 Installing dependencies..."
 if command -v apt-get &> /dev/null; then
-    sudo apt-get update
-    sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
-    
-    # Fix 'bat' vs 'batcat'
+    sudo apt-get update && sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
     mkdir -p "$HOME/.local/bin"
     [ ! -f "$HOME/.local/bin/bat" ] && ln -s /usr/bin/batcat "$HOME/.local/bin/bat"
-
-    # Official eza installation
+    
     sudo mkdir -p /etc/apt/keyrings
     wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
     echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
@@ -26,5 +22,4 @@ command -v starship &> /dev/null || curl -sS https://starship.rs/install.sh | sh
 chmod +x "$DOTFILES_DIR/setup_links.sh"
 "$DOTFILES_DIR/setup_links.sh"
 
-[ "$SHELL" != "$(which zsh)" ] && chsh -s "$(which zsh)"
-echo "✅ Setup complete! Restart terminal."
+echo "✅ Done! Run: source ~/.zshrc"
