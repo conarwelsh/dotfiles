@@ -4,7 +4,8 @@ success_symbol = "[λ](bold purple)"
 error_symbol = "[λ](bold red)"
 [directory]
 style = "bold blue"
-[git_branch]
-symbol = " "
-[git_status]
-style = "bold red"
+truncation_length = 3
+[nodejs]
+symbol = " "
+style = "bold green"
+disabled = false

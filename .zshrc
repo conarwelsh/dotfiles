@@ -27,11 +27,17 @@ alias tt='source $DOTFILES/scripts/theme-toggle.sh'
 alias reload='source ~/.zshrc'
 alias c='clear'
 
+# --- WORKSPACE & MULTIPLEXING ---
+alias zj='zellij'
+alias lg='lazygit'
+alias dev='zellij --layout turbo'
+
 # --- DEVELOPMENT ALIASES ---
 alias sous='pnpm exec sous'
 alias t='turbo'
 alias td='turbo run dev'
 alias tb='turbo run build'
+alias tauri='cargo tauri'
 
 # --- GIT ALIASES ---
 alias g='git'
@@ -41,11 +47,9 @@ alias gaa='git add .'
 alias gc='git commit -m'
 alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
-alias gco='git checkout'
 
 # --- BETTER DEFAULTS (EZA) ---
 if command -v eza > /dev/null; then
-    # Your requested lah alias using eza
     alias ls='eza -lah --icons --git --group-directories-first'
     alias ll='eza -l --icons --git --group-directories-first'
     alias lt='eza --tree --icons'
@@ -54,18 +58,11 @@ else
     alias ll='ls -alF'
 fi
 
-# --- BAT (CAT REPLACEMENT) ---
 if command -v bat > /dev/null; then
     alias cat='bat --style=plain --paging=never'
 elif command -v batcat > /dev/null; then
     alias cat='batcat --style=plain --paging=never'
 fi
-
-# --- DOCKER ALIASES ---
-alias dps='docker ps'
-alias dimg='docker images'
-alias ddown='docker-compose down'
-alias dup='docker-compose up -d'
 
 # --- Smart Jumper ---
 z() {

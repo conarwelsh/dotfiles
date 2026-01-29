@@ -1,14 +1,42 @@
 #!/bin/bash
 
-# Version 7: Fixed NVM/PNPM path persistence and installation sourcing.
-# Updated with advanced dev aliases and Starship module optimizations.
+# Version 8.1: Workspace Optimized (FIXED Zellij Layout Paths)
+# Added Zellij (Multiplexer), Lazygit (TUI), and Turborepo Workspace Layouts.
+# Includes NVM, PNPM, Node LTS, and dynamic OSC color swapping.
 # Optimized for WSL + Ubuntu + Zsh.
 
-echo "🚀 Generating conarwelsh/dotfiles (v7 - Environment Persistence)..."
+echo "🚀 Generating conarwelsh/dotfiles (v8.1 - Layout Path Fix)..."
 
-mkdir -p scripts themes
+# Create directory structure
+mkdir -p scripts themes layouts
 
-# 1. install.sh (Robust Path Handling)
+# 1. README.md
+cat << 'EOF' > README.md
+# 🚀 Terminal Velocity: Awesome Dotfiles
+
+A high-performance terminal environment optimized for Web Developers. Specifically tailored for **Turborepo, NestJS, Next.js, and Tauri** workflows.
+
+## 🎨 Dual-Core Themes
+Switch between **One Dark Pro** (Focus) and **Glass Frosted** (Aesthetic) instantly.
+
+**Switch Command:** `tt`
+
+## 🛠️ Installation
+Run this one-liner on any fresh Linux/WSL instance:
+\`\`\`bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/conarwelsh/dotfiles/main/install.sh)"
+\`\`\`
+
+## ⌨️ Shortcuts
+* `tt`: Toggle Theme (Changes prompt and terminal background)
+* `dev`: Launch Turborepo Workspace (Editor + API Logs + Web Logs in Zellij)
+* `zj`: Launch Zellij Multiplexer
+* `lg`: Launch Lazygit TUI
+* `z`: Smart Directory Jump (fzf)
+* `ll`: Modern LS with Icons
+EOF
+
+# 2. install.sh
 cat << 'EOF' > install.sh
 #!/bin/bash
 set -e
@@ -17,7 +45,25 @@ DOTFILES_DIR="$HOME/.dotfiles"
 
 echo "📦 Installing System Dependencies..."
 if command -v apt-get &> /dev/null; then
-    sudo apt-get update && sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget
+    sudo apt-get update && sudo apt-get install -y zsh git curl fzf zoxide bat ripgrep fd-find gpg wget tar
+    
+    # Lazygit Installation
+    if ! command -v lazygit &> /dev/null; then
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+        tar xf lazygit.tar.gz lazygit
+        sudo install lazygit /usr/local/bin
+        rm lazygit.tar.gz lazygit
+    fi
+
+    # Zellij Installation
+    if ! command -v zellij &> /dev/null; then
+        curl -L https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz -o zellij.tar.gz
+        tar -xvf zellij.tar.gz
+        sudo install zellij /usr/local/bin
+        rm zellij.tar.gz zellij
+    fi
+
     mkdir -p "$HOME/.local/bin"
     [ ! -f "$HOME/.local/bin/bat" ] && ln -sf /usr/bin/batcat "$HOME/.local/bin/bat"
     
@@ -42,11 +88,9 @@ export NVM_DIR="$HOME/.nvm"
 if [ ! -d "$NVM_DIR" ]; then
     echo "🟢 Installing NVM..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-    # Load NVM into the script session to install node
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install --lts
 else
-    echo "✔️ NVM already installed."
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     nvm install --lts
 fi
@@ -64,24 +108,32 @@ chmod +x "$DOTFILES_DIR/setup_links.sh"
 # Set Zsh as default
 [ "$SHELL" != "$(which zsh)" ] && chsh -s "$(which zsh)"
 
-echo "✅ Environment Ready!"
-echo "👉 CRITICAL: Run 'source ~/.zshrc' to enable node, nvm, and pnpm."
+echo "✅ Full Stack Setup Complete! Run: source ~/.zshrc"
 EOF
 
-# 2. setup_links.sh
+# 3. setup_links.sh (FIXED LAYOUT PATH)
 cat << 'EOF' > setup_links.sh
 #!/bin/bash
 DOTFILES_DIR="$HOME/.dotfiles"
 CONFIG_DIR="$HOME/.config"
-mkdir -p "$CONFIG_DIR" "$HOME/.local/bin"
 
+# Create necessary directories
+mkdir -p "$CONFIG_DIR/zellij/layouts" 
+mkdir -p "$HOME/.local/bin"
+
+# Core Configs
 ln -sf "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
 chmod +x "$DOTFILES_DIR/scripts/theme-toggle.sh"
 ln -sf "$DOTFILES_DIR/scripts/theme-toggle.sh" "$HOME/.local/bin/tt"
 ln -sf "$DOTFILES_DIR/themes/one-dark.toml" "$CONFIG_DIR/starship.toml"
+
+# Zellij Layouts (Linked to the 'layouts' subfolder where Zellij looks)
+ln -sf "$DOTFILES_DIR/layouts/turbo.kdl" "$CONFIG_DIR/zellij/layouts/turbo.kdl"
+
+echo "✨ Links synchronized."
 EOF
 
-# 3. .zshrc (The Engine)
+# 4. .zshrc
 cat << 'EOF' > .zshrc
 # --- ZSH Performance ---
 zstyle ':completion:*:*:docker:*' cache-policy dummy
@@ -112,11 +164,17 @@ alias tt='source $DOTFILES/scripts/theme-toggle.sh'
 alias reload='source ~/.zshrc'
 alias c='clear'
 
+# --- WORKSPACE & MULTIPLEXING ---
+alias zj='zellij'
+alias lg='lazygit'
+alias dev='zellij --layout turbo'
+
 # --- DEVELOPMENT ALIASES ---
 alias sous='pnpm exec sous'
 alias t='turbo'
 alias td='turbo run dev'
 alias tb='turbo run build'
+alias tauri='cargo tauri'
 
 # --- GIT ALIASES ---
 alias g='git'
@@ -126,11 +184,9 @@ alias gaa='git add .'
 alias gc='git commit -m'
 alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
-alias gco='git checkout'
 
 # --- BETTER DEFAULTS (EZA) ---
 if command -v eza > /dev/null; then
-    # Your requested lah alias using eza
     alias ls='eza -lah --icons --git --group-directories-first'
     alias ll='eza -l --icons --git --group-directories-first'
     alias lt='eza --tree --icons'
@@ -139,18 +195,11 @@ else
     alias ll='ls -alF'
 fi
 
-# --- BAT (CAT REPLACEMENT) ---
 if command -v bat > /dev/null; then
     alias cat='bat --style=plain --paging=never'
 elif command -v batcat > /dev/null; then
     alias cat='batcat --style=plain --paging=never'
 fi
-
-# --- DOCKER ALIASES ---
-alias dps='docker ps'
-alias dimg='docker images'
-alias ddown='docker-compose down'
-alias dup='docker-compose up -d'
 
 # --- Smart Jumper ---
 z() {
@@ -163,7 +212,7 @@ z() {
 }
 EOF
 
-# 4. scripts/theme-toggle.sh
+# 5. scripts/theme-toggle.sh
 cat << 'EOF' > scripts/theme-toggle.sh
 #!/bin/zsh
 THEME_DIR="$HOME/.dotfiles/themes"
@@ -188,47 +237,60 @@ else
 fi
 EOF
 
-# 5. themes/one-dark.toml
+# 6. themes/one-dark.toml
 cat << 'EOF' > themes/one-dark.toml
 add_newline = true
 [character]
 success_symbol = "[λ](bold purple)"
 error_symbol = "[λ](bold red)"
-
 [directory]
 style = "bold blue"
 truncation_length = 3
-truncation_symbol = "…/"
-
 [nodejs]
 symbol = " "
 style = "bold green"
-format = "via [$symbol($version )]($style)"
-disabled = false # Set to true if WSL terminal lag occurs
-
-[git_status]
-style = "bold red"
+disabled = false
 EOF
 
-# 6. themes/glass-frosted.toml
+# 7. themes/glass-frosted.toml
 cat << 'EOF' > themes/glass-frosted.toml
 add_newline = true
 [character]
 success_symbol = "[❯](bold #f72585)[❯](bold #4cc9f0)"
 error_symbol = "[✖](bold red)"
-
 [directory]
 style = "bold #4cc9f0"
 format = "in [$path]($style) "
-
 [nodejs]
 symbol = "󰎙 "
 style = "bold #4361ee"
-format = "using [$symbol($version)]($style) "
 disabled = false
 EOF
 
-# 7. windows-terminal.json
+# 8. layouts/turbo.kdl
+cat << 'EOF' > layouts/turbo.kdl
+layout {
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+    pane split_direction="vertical" {
+        pane size="60%" name="EDITOR" focus=true
+        pane split_direction="horizontal" {
+            pane name="API LOGS (NestJS)" command="pnpm" {
+                args "run" "dev" "--filter" "api"
+            }
+            pane name="WEB LOGS (Next.js)" command="pnpm" {
+                args "run" "dev" "--filter" "web"
+            }
+        }
+    }
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}
+EOF
+
+# 9. windows-terminal.json
 cat << 'EOF' > windows-terminal.json
 {
     "profiles": {
@@ -241,4 +303,7 @@ cat << 'EOF' > windows-terminal.json
 EOF
 
 chmod +x install.sh setup_links.sh scripts/theme-toggle.sh
-echo "✅ Version 7 generated. Run 'bash create_dotfiles_repo.sh' then 'source ~/.zshrc'"
+echo "✅ Master Repository Files Generated Successfully (v8.1)!"
+echo "Next Steps:"
+echo "1. Run: ./setup_links.sh"
+echo "2. Run: dev"

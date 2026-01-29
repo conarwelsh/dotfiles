@@ -1,0 +1,19 @@
+layout {
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+    pane split_direction="vertical" {
+        pane size="60%" name="EDITOR" focus=true
+        pane split_direction="horizontal" {
+            pane name="API LOGS (NestJS)" command="pnpm" {
+                args "run" "dev" "--filter" "api"
+            }
+            pane name="WEB LOGS (Next.js)" command="pnpm" {
+                args "run" "dev" "--filter" "web"
+            }
+        }
+    }
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}

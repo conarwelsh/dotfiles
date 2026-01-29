@@ -5,7 +5,7 @@ error_symbol = "[✖](bold red)"
 [directory]
 style = "bold #4cc9f0"
 format = "in [$path]($style) "
-[git_status]
-style = "bold #f72585"
-ahead = "⇡"
-behind = "⇣"
+[nodejs]
+symbol = "󰎙 "
+style = "bold #4361ee"
+disabled = false
